@@ -4,7 +4,7 @@ import Home from './home/Home';
 
 function App() {
   return (
-    <div>
+    <div className="flex bg-indigo-900 min-h-screen">
         <Switch>
             <Route path='/' component={Home} />
         </Switch>
