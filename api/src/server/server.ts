@@ -58,7 +58,7 @@ export default class Server {
             console.log(this.activeSockets);
 
             socket.on("call-user", data => {
-                console.log("call user");
+                // console.log("call user");
                 socket.to(data.to).emit("call-made", {
                     offer: data.offer,
                     socket: socket.id
@@ -66,11 +66,29 @@ export default class Server {
             });
 
             socket.on("make-answer", data => {
-                console.log("make answer");
+                // console.log("make answer");
                 socket.to(data.to).emit("answer-made", {
                     socket: socket.id,
                     answer: data.answer
                 });
+            });
+
+            socket.on("new-ice-candidate", data => {
+                // console.log("make answer");
+                // console.log(socket.id);
+               /* console.log("sending 'added-ice-candidate' to socket : ");
+                console.log(data.to);
+                console.log("here is the data sent: ");*/
+                console.log(data.eventCandidate);
+
+                socket.broadcast.emit("added-ice-candidate", {
+                    iceCandidate: data.eventCandidate
+                });
+
+               /* socket.to(data.to).emit("added-ice-candidate", {
+                    socket: socket.id,
+                    answer: data.eventCandidate
+                });*/
             });
         })
     }

@@ -20,6 +20,8 @@ const VideoCall: React.FC = () => {
 
     const peerConnection = new RTCPeerConnection(configuration);
 
+    const [remoteSocketId, setRemoteSocketId] = useState<string>('');
+
     navigator.getUserMedia(
         { video: true, audio: true },
         stream => {
@@ -35,7 +37,13 @@ const VideoCall: React.FC = () => {
 
 
     const callUser = async (socketId: string) => {
+        console.log("my socket");
+        console.log(socket.id);
+
+        console.log("remote socket:");
         console.log(socketId);
+
+        setRemoteSocketId(socketId);
 
         const offer = await peerConnection.createOffer();
         await peerConnection.setLocalDescription(offer);
@@ -84,6 +92,36 @@ const VideoCall: React.FC = () => {
                 remoteVideo.current.srcObject = stream;
             }
         };
+
+        // Listen for local ICE candidates on the local RTCPeerConnection
+        peerConnection.addEventListener('icecandidate', event => {
+            console.log("event: ");
+            console.log(event);
+            if (event.candidate) {
+                socket.emit('new-ice-candidate', {
+                    eventCandidate: event.candidate,
+                    to: remoteSocketId
+                });
+            }
+        });
+
+        // Listen for remote ICE candidates and add them to the local RTCPeerConnection
+        //signalingChannel.addEventListener('message', async message => {
+            socket.on("added-ice-candidate", async (data: any) => {
+                console.log("is this ever called???");
+                console.log(data.iceCandidate);
+                if (data) {
+                    try {
+                        await peerConnection.addIceCandidate(data.iceCandidate);
+                    } catch (e) {
+                        console.error('Error adding received ice candidate', e);
+                    }
+                }
+            })
+
+       // });
+
+
 
     }, []);
 
