@@ -17,11 +17,13 @@ export default class Server {
             console.log(`Server is listening on port ${this.port}`);
         });
         this.socketIOServer = socketIO(httpServer);
+        this.activeSockets = [];
         this.handleSocketConnection();
     }
 
     private handleSocketConnection(): void {
         console.log('Socket IO server started');
+
         this.socketIOServer.on('connection', socket => {
             const existingSocket = this.activeSockets.find((activeSocket) =>
                 activeSocket === socket.id
@@ -39,15 +41,35 @@ export default class Server {
                 users: [socket.id]
             });
 
-            // socket.emit("FromAPI", "test socket connected");
-            // console.log('Socket connected');
-
             socket.on("disconnect", () => {
                 this.activeSockets = this.activeSockets.filter(
                     existingSocket => existingSocket !== socket.id
                 );
                 socket.broadcast.emit("remove-user", {
                     socketId: socket.id
+                });
+            });
+
+            // console.log(socket);
+
+            // socket.emit("FromAPI", "test socket connected");
+            // console.log('Socket connected');
+            console.log("active sockets :");
+            console.log(this.activeSockets);
+
+            socket.on("call-user", data => {
+                console.log("call user");
+                socket.to(data.to).emit("call-made", {
+                    offer: data.offer,
+                    socket: socket.id
+                })
+            });
+
+            socket.on("make-answer", data => {
+                console.log("make answer");
+                socket.to(data.to).emit("answer-made", {
+                    socket: socket.id,
+                    answer: data.answer
                 });
             });
         })

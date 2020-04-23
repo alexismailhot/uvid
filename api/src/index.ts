@@ -5,7 +5,3 @@ import Server from './server/server';
 const app = express();
 const server = new Server(app, PORT);
 server.start();
-
-app.get('/', (req, res) => {
-    res.send('Hello world!');
-});
