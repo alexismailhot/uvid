@@ -65,14 +65,10 @@ export default class Server {
             });
 
             socket.on("new-ice-candidate", data => {
+                // TODO: je ne crois pas que ce devrait etre un broadcast ici
                 socket.broadcast.emit("added-ice-candidate", {
                     iceCandidate: data.eventCandidate
                 });
-
-               /* socket.to(data.to).emit("added-ice-candidate", {
-                    socket: socket.id,
-                    answer: data.eventCandidate
-                });*/
             });
         })
     }

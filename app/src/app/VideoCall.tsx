@@ -13,22 +13,20 @@ const VideoCall: React.FC = () => {
     const remoteVideo = useRef<HTMLVideoElement>(null);
 
     const [users, updateUsers] = useState<string[] | null>(null);
-    const [remoteSocketId, setRemoteSocketId] = useState<string>('');
 
-    navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: true
-    }).then(stream => {
-        if (localVideo.current) {
-            localVideo.current.srcObject = stream;
-        }
-        stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
-    }).catch(e => console.log('getUserMedia() error: ', e));
-
+    const startCamera = async () => {
+        navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: true
+        }).then(stream => {
+            if (localVideo.current) {
+                localVideo.current.srcObject = stream;
+            }
+            stream.getTracks().forEach(track => peerConnection.addTrack(track, stream));
+        }).catch(e => console.log('getUserMedia() error: ', e));
+    };
 
     const callUser = async (socketId: string) => {
-        setRemoteSocketId(socketId);
-
         const offer = await peerConnection.createOffer();
         await peerConnection?.setLocalDescription(new RTCSessionDescription(offer!));
 
@@ -63,7 +61,7 @@ const VideoCall: React.FC = () => {
             );
         });
 
-        peerConnection!.ontrack = function({ streams: [stream] }) {
+        peerConnection.ontrack = function({ streams: [stream] }) {
             if (remoteVideo.current) {
                 remoteVideo.current.srcObject = stream;
             }
@@ -73,16 +71,13 @@ const VideoCall: React.FC = () => {
         peerConnection.addEventListener('icecandidate', event => {
             if (event.candidate) {
                 socket.emit('new-ice-candidate', {
-                    eventCandidate: event.candidate,
-                    to: remoteSocketId
+                    eventCandidate: event.candidate
                 });
             }
         });
 
         // Listen for remote ICE candidates and add them to the local RTCPeerConnection
         socket.on("added-ice-candidate", async (data: any) => {
-            console.log("addIceCandidate");
-            console.log(data);
             if (data) {
                 try {
                     await peerConnection.addIceCandidate(data.iceCandidate);
@@ -96,6 +91,7 @@ const VideoCall: React.FC = () => {
     if (users) {
         return (
             <div>
+                <div onClick={() => startCamera()}>Start camera</div>
                 <div>Connect</div>
                 <div>
                     Users:
