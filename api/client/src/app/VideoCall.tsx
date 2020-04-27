@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import socketIOClient from 'socket.io-client';
 
-const ENDPOINT = 'http://127.0.0.1:4000';
+// const ENDPOINT = 'http://127.0.0.1:4000';
 const CONFIGURATION = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
 
-const socket = socketIOClient(ENDPOINT);
+// const socket = socketIOClient(ENDPOINT);
+const socket = socketIOClient();
 const peerConnection = new RTCPeerConnection(CONFIGURATION);
 
 const VideoCall: React.FC = () => {
@@ -52,7 +53,7 @@ const VideoCall: React.FC = () => {
         });
 
         socket.on("add-new-user", (usersList: {users: string[]}) => {
-           updateUsers(usersList['users']);
+           updateUsers(usersList.users);
         });
 
         socket.on("answer-made", async (data: any) => {
@@ -61,7 +62,7 @@ const VideoCall: React.FC = () => {
             );
         });
 
-        peerConnection.ontrack = function({ streams: [stream] }) {
+        peerConnection.ontrack = ({streams: [stream]}) => {
             if (remoteVideo.current) {
                 remoteVideo.current.srcObject = stream;
             }
