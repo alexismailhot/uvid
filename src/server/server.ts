@@ -5,7 +5,7 @@ export default class Server {
     private readonly app: Express;
     private socketIOServer: SocketIOServer;
     private readonly port: string;
-    private activeSockets: string[] = [];
+    private activeSockets: Map<string, string> = new Map();
 
     constructor(app: Express, port: string) {
         this.app = app;
@@ -17,7 +17,7 @@ export default class Server {
             console.log(`Server is listening on port ${this.port}`);
         });
         this.socketIOServer = socketIO(httpServer);
-        this.activeSockets = [];
+        this.activeSockets = new Map();
         this.handleSocketConnection();
     }
 
@@ -25,26 +25,28 @@ export default class Server {
         console.log('Socket IO server started');
 
         this.socketIOServer.on('connection', socket => {
-            const existingSocket = this.activeSockets.find((activeSocket) =>
-                activeSocket === socket.id
-            );
-
+            const existingSocket = this.activeSockets.has(socket.id);
             if (!existingSocket) {
-                this.activeSockets.push(socket.id);
+                socket.emit("ask-username");
 
-                socket.emit('add-new-user', {
-                    users: this.activeSockets.filter(existingSocket => existingSocket !== socket.id)
-                })
+                socket.on('give-username', data => {
+                    this.activeSockets.set(data.socketId, data.username);
+                    if (this.activeSockets.size > 1) {
+                        // Send message to all existing sockets (except new one) to tell them to connect with this new socket
+                        for (const socketId of this.activeSockets.keys()) {
+                            if (socketId !== socket.id) {
+                                socket.to(socketId).emit('new-user', {
+                                   id: socket.id,
+                                   name: this.activeSockets.get(socket.id)
+                                });
+                            }
+                        }
+                    }
+                });
             }
 
-            socket.broadcast.emit("add-new-user", {
-                users: [socket.id]
-            });
-
             socket.on("disconnect", () => {
-                this.activeSockets = this.activeSockets.filter(
-                    existingSocket => existingSocket !== socket.id
-                );
+                this.activeSockets.delete(socket.id);
                 socket.broadcast.emit("remove-user", {
                     socketId: socket.id
                 });
