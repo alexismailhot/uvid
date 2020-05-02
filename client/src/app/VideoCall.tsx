@@ -7,6 +7,8 @@ const peerConnection = new RTCPeerConnection(CONFIGURATION);
 
 // TODO: constantes pour tous les events de socket
 
+// TODO: show unique link to first user, and delete when partner joins call
+
 const VideoCall: React.FC = () => {
     const location = useLocation();
     // @ts-ignore
