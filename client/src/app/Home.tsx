@@ -18,12 +18,12 @@ const Home: React.FC = () => {
     };
 
     return (
-        <div className="w-full min-h-full flex flex-col justify-center items-center">
-            <div className="text-white text-5xl font-bold">Welcom to Uvid</div>
-            <div className="text-white text-xl mb-5">Please enter your name before joining</div>
-            <input ref={userName} className="text-xl w-64 text-center p-1 rounded mb-2 outline-none" placeholder="Add your name" />
-            <div ref={enterNameErrorMessage} className="hidden text-red-500">Sorry, but you'll need to enter your name before joining</div>
-            <div className="text-white bg-green-400 text-xl rounded-full w-32 p-2 text-center cursor-pointer mt-5" onClick={createCall}>Join</div>
+        <div className='w-full min-h-full flex flex-col justify-center items-center'>
+            <div className='text-white text-5xl font-bold'>Welcom to Uvid</div>
+            <div className='text-white text-xl mb-5'>Please enter your name before joining</div>
+            <input ref={userName} className='text-xl w-64 text-center p-1 rounded mb-2 outline-none' placeholder="Add your name" />
+            <div ref={enterNameErrorMessage} className='hidden text-red-500'>Sorry, but you'll need to enter your name before joining</div>
+            <div className='text-white bg-green-400 text-xl rounded-full w-32 p-2 text-center cursor-pointer mt-5' onClick={createCall}>Join</div>
         </div>
     );
 };
