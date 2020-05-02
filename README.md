@@ -2,6 +2,8 @@
 
 Lien de l'application : https://uvid-2020.herokuapp.com/
 
+Lien du repo : https://github.com/alexismailhot/uvid
+
 **Techologies utilisées:**
 
 - React pour le frontend
