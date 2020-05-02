@@ -5,28 +5,41 @@ import { useLocation } from 'react-router';
 const CONFIGURATION = {'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}]};
 const peerConnection = new RTCPeerConnection(CONFIGURATION);
 
-// TODO: constantes pour tous les events de socket
-
-// TODO: show unique link to first user, and delete when partner joins call
-
 const VideoCall: React.FC = () => {
     const location = useLocation();
+    const currentURL = window.location.href;
+    const joinCallURL = currentURL.substring(0, currentURL.lastIndexOf("/"));
     // @ts-ignore
     const userName = location.state.name;
+    // @ts-ignore
+    const showJoinURL = location.state.showJoinURL;
     const [remoteUsername, setRemoteUsername] = useState<string>('');
     const [socket, setSocket] = useState<SocketIOClient.Socket | undefined>(undefined);
-    if (!socket) {
-        setSocket(socketIOClient());
-    }
+    const [cameraStarted, setCameraStarted] = useState<boolean>(false);
 
     const localVideo = useRef<HTMLVideoElement>(null);
     const remoteVideo = useRef<HTMLVideoElement>(null);
-    const videoWrapper = useRef<HTMLDivElement>(null);
-    const callEndedMessage = useRef<HTMLDivElement>(null);
-    const partnerEndedCall = useRef<HTMLDivElement>(null);
     const localVideoWrapper = useRef<HTMLDivElement>(null);
     const remoteVideoWrapper = useRef<HTMLDivElement>(null);
+    const videosWrapper = useRef<HTMLDivElement>(null);
+    const callEndedMessage = useRef<HTMLDivElement>(null);
+    const partnerEndedCall = useRef<HTMLDivElement>(null);
     const remoteUsernameDiv = useRef<HTMLDivElement>(null);
+    const joinURL = useRef<HTMLDivElement>(null);
+
+    enum SocketEvent {
+        CALL_USER = 'call-user',
+        END_CALL = 'end-call',
+        ASK_USERNAME = 'ask-username',
+        GIVE_USERNAME = 'give-username',
+        NEW_USER = 'new-user',
+        CALL_MADE = 'call-made',
+        MAKE_ANSWER = 'make-answer',
+        ANSWER_MADE = 'answer-made',
+        ADDED_ICE_CANDIDATE = 'added-ice-candidate',
+        CALL_ENDED = 'call-ended',
+        NEW_ICE_CANDIDATE = 'new-ice-candidate'
+    }
 
     const startCamera = async () => {
         navigator.mediaDevices.getUserMedia({
@@ -40,7 +53,10 @@ const VideoCall: React.FC = () => {
         }).catch(e => console.log('Error: ', e));
     };
 
-    const [cameraStarted, setCameraStarted] = useState<boolean>(false);
+    if (!socket) {
+        setSocket(socketIOClient());
+    }
+
     if (!cameraStarted) {
         startCamera();
         setCameraStarted(true);
@@ -50,7 +66,7 @@ const VideoCall: React.FC = () => {
         const offer = await peerConnection.createOffer();
         await peerConnection?.setLocalDescription(new RTCSessionDescription(offer!));
 
-        socket?.emit('call-user', {
+        socket?.emit(SocketEvent.CALL_USER, {
             offer,
             username: userName,
             to: socketId
@@ -58,20 +74,20 @@ const VideoCall: React.FC = () => {
     };
 
     const stopCall = () => {
-            if (localVideo.current) {
-                localVideo.current.srcObject = null;
-            }
-            if (remoteVideo.current) {
-                remoteVideo.current.srcObject = null;
-            }
-            if (videoWrapper.current) {
-                videoWrapper.current.classList.add('hidden');
-            }
-            if (callEndedMessage.current) {
-                callEndedMessage.current.classList.remove('hidden');
-            }
-            peerConnection.close();
-            socket?.emit('end-call');
+        if (localVideo.current) {
+            localVideo.current.srcObject = null;
+        }
+        if (remoteVideo.current) {
+            remoteVideo.current.srcObject = null;
+        }
+        if (videosWrapper.current) {
+            videosWrapper.current.classList.add('hidden');
+        }
+        if (callEndedMessage.current) {
+            callEndedMessage.current.classList.remove('hidden');
+        }
+        peerConnection.close();
+        socket?.emit(SocketEvent.END_CALL);
     };
 
     useEffect(() => {
@@ -82,7 +98,22 @@ const VideoCall: React.FC = () => {
 
     useEffect(() => {
         if (socket) {
-            socket.on('call-made', async (data: any) => {
+            socket.on(SocketEvent.ASK_USERNAME, () => {
+                socket.emit(SocketEvent.GIVE_USERNAME, {
+                    username: userName,
+                    socketId: socket.id
+                })
+            });
+
+            socket.on(SocketEvent.NEW_USER, async (user: {id: string, name: string}) => {
+                setRemoteUsername(user.name);
+                if (joinURL.current) {
+                    joinURL.current.classList.add('hidden');
+                }
+                await callUser(user.id);
+            });
+
+            socket.on(SocketEvent.CALL_MADE, async (data: any) => {
                 setRemoteUsername(data.username);
 
                 await peerConnection.setRemoteDescription(
@@ -92,31 +123,19 @@ const VideoCall: React.FC = () => {
                 const answer = await peerConnection.createAnswer();
                 await peerConnection.setLocalDescription(new RTCSessionDescription(answer));
 
-                socket.emit('make-answer', {
+                socket.emit(SocketEvent.MAKE_ANSWER, {
                     answer,
                     to: data.socket
                 });
             });
 
-            socket.on('new-user', async (user: {id: string, name: string}) => {
-                setRemoteUsername(user.name);
-                await callUser(user.id);
-            });
-
-            socket.on('ask-username', () => {
-                socket.emit('give-username', {
-                    username: userName,
-                    socketId: socket.id
-                })
-            });
-
-            socket.on('answer-made', async (data: any) => {
+            socket.on(SocketEvent.ANSWER_MADE, async (data: any) => {
                 await peerConnection.setRemoteDescription(
                     new RTCSessionDescription(data.answer)
                 );
             });
 
-            socket.on('added-ice-candidate', async (data: any) => {
+            socket.on(SocketEvent.ADDED_ICE_CANDIDATE, async (data: any) => {
                 if (data) {
                     try {
                         await peerConnection.addIceCandidate(data.iceCandidate);
@@ -126,15 +145,15 @@ const VideoCall: React.FC = () => {
                 }
             });
 
-            socket.on('call-ended', () => {
+            socket.on(SocketEvent.CALL_ENDED, () => {
                 if (localVideo.current) {
                     localVideo.current.srcObject = null;
                 }
                 if (remoteVideo.current) {
                     remoteVideo.current.srcObject = null;
                 }
-                if (videoWrapper.current) {
-                    videoWrapper.current.classList.add('hidden');
+                if (videosWrapper.current) {
+                    videosWrapper.current.classList.add('hidden');
                 }
                 if (callEndedMessage.current) {
                     callEndedMessage.current.classList.remove('hidden');
@@ -159,7 +178,7 @@ const VideoCall: React.FC = () => {
 
             peerConnection.addEventListener('icecandidate', event => {
                 if (event.candidate) {
-                    socket.emit('new-ice-candidate', {
+                    socket.emit(SocketEvent.NEW_ICE_CANDIDATE, {
                         eventCandidate: event.candidate
                     });
                 }
@@ -169,7 +188,7 @@ const VideoCall: React.FC = () => {
 
     return (
         <div className='flex w-full'>
-            <div ref={videoWrapper} className='flex flex-col justify-center items-center w-full'>
+            <div ref={videosWrapper} className='flex flex-col justify-center items-center w-full'>
                 <div className='flex justify-center'>
                     <div ref={localVideoWrapper} className='flex flex-col w-5/6 items-center'>
                         <video className='w-full' ref={localVideo} autoPlay muted />
@@ -180,6 +199,7 @@ const VideoCall: React.FC = () => {
                         <div ref={remoteUsernameDiv} className='text-white text-xl mt-5'>{remoteUsername}</div>
                     </div>
                 </div>
+                <div ref={joinURL} className={`${showJoinURL ? '' : 'hidden'} text-white text-xl mt-5`}>Share this link to let someone join your call: {joinCallURL}</div>
                 <div className='text-white bg-red-400 text-xl rounded-full w-32 p-2 text-center cursor-pointer mt-5' onClick={stopCall}>Stop</div>
             </div>
             <div ref={callEndedMessage} className='hidden flex flex-col justify-center items-center w-full'>

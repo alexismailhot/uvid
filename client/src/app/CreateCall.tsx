@@ -13,7 +13,10 @@ const CreateCall: React.FC = () => {
         if (userName.current && userName.current.value !== '') {
             history.push({
                 pathname:`/${FAKE_UNIQUE_LINK}/videocall`,
-                state: { name: userName.current.value }
+                state: {
+                    name: userName.current.value,
+                    showJoinURL: true
+                }
             });
         } else {
             enterNameErrorMessage.current?.classList.remove('hidden');

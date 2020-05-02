@@ -13,7 +13,10 @@ const JoinCall: React.FC = () => {
         if (userName.current && userName.current.value !== '') {
             history.push({
                 pathname:`${uniqueLink}/videocall`,
-                state: { name: userName.current.value }
+                state: {
+                    name: userName.current.value,
+                    showJoinURL: false
+                }
             });
         } else {
             enterNameErrorMessage.current?.classList.remove('hidden');

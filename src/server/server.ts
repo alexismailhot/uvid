@@ -1,5 +1,18 @@
 import { Express } from 'express';
 import socketIO, { Server as SocketIOServer } from 'socket.io';
+import {
+    SOCKET_ADDED_ICE_CANDIDATE,
+    SOCKET_ANSWER_MADE,
+    SOCKET_ASK_USERNAME,
+    SOCKET_CALL_ENDED,
+    SOCKET_CALL_MADE,
+    SOCKET_CALL_USER,
+    SOCKET_CONNECTION, SOCKET_END_CALL,
+    SOCKET_GIVE_USERNAME,
+    SOCKET_MAKE_ANSWER,
+    SOCKET_NEW_ICE_CANDIDATE,
+    SOCKET_NEW_USER
+} from '../constants/constants';
 
 export default class Server {
     private readonly app: Express;
@@ -24,18 +37,17 @@ export default class Server {
     private handleSocketConnection(): void {
         console.log('Socket IO server started');
 
-        this.socketIOServer.on('connection', socket => {
+        this.socketIOServer.on(SOCKET_CONNECTION, socket => {
             const existingSocket = this.activeSockets.has(socket.id);
             if (!existingSocket) {
-                socket.emit('ask-username');
+                socket.emit(SOCKET_ASK_USERNAME);
 
-                // TODO: constantes pour tous les events de socket
-                socket.on('give-username', data => {
+                socket.on(SOCKET_GIVE_USERNAME, data => {
                     this.activeSockets.set(data.socketId, data.username);
                     if (this.activeSockets.size > 1) {
                         for (const socketId of this.activeSockets.keys()) {
                             if (socketId !== socket.id) {
-                                socket.to(socketId).emit('new-user', {
+                                socket.to(socketId).emit(SOCKET_NEW_USER, {
                                    id: socket.id,
                                    name: this.activeSockets.get(socket.id)
                                 });
@@ -45,35 +57,35 @@ export default class Server {
                 });
             }
 
-            socket.on('call-user', data => {
-                socket.to(data.to).emit('call-made', {
+            socket.on(SOCKET_CALL_USER, data => {
+                socket.to(data.to).emit(SOCKET_CALL_MADE, {
                     offer: data.offer,
                     socket: socket.id,
                     username: data.username
                 })
             });
 
-            socket.on('make-answer', data => {
-                socket.to(data.to).emit('answer-made', {
+            socket.on(SOCKET_MAKE_ANSWER, data => {
+                socket.to(data.to).emit(SOCKET_ANSWER_MADE, {
                     socket: socket.id,
                     answer: data.answer
                 });
             });
 
-            socket.on('new-ice-candidate', data => {
+            socket.on(SOCKET_NEW_ICE_CANDIDATE, data => {
                 for (const socketId of this.activeSockets.keys()) {
                     if (socketId !== socket.id) {
-                        socket.to(socketId).emit('added-ice-candidate', {
+                        socket.to(socketId).emit(SOCKET_ADDED_ICE_CANDIDATE, {
                             iceCandidate: data.eventCandidate
                         });
                     }
                 }
             });
 
-            socket.on('end-call', () => {
+            socket.on(SOCKET_END_CALL, () => {
                 for (const socketId of this.activeSockets.keys()) {
                     if (socketId !== socket.id) {
-                        socket.to(socketId).emit('call-ended');
+                        socket.to(socketId).emit(SOCKET_CALL_ENDED);
                     }
                 }
             });
