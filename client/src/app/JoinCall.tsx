@@ -5,7 +5,6 @@ const JoinCall: React.FC = () => {
     const history = useHistory();
     const location = useLocation();
     const uniqueLink = location.pathname;
-
     const userName = useRef<HTMLInputElement>(null);
     const enterNameErrorMessage = useRef<HTMLDivElement>(null);
 

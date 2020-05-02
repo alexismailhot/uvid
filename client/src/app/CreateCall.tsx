@@ -1,7 +1,6 @@
 import React, { useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 
-// TODO: generate real unique link?
 const FAKE_UNIQUE_LINK = '1g6jd93fdz';
 
 const CreateCall: React.FC = () => {
